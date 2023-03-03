@@ -1,11 +1,14 @@
 package handler
 
 import (
+	"filestore-server/meta"
+	"filestore-server/util"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"time"
 )
 
 // UploadHandler 处理文件上传
@@ -28,18 +31,28 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		defer file.Close()
 
-		newFile, err := os.Create("/tmp/" + head.Filename)
+		fileMeta := meta.FileMeta{
+			FileName: head.Filename,
+			Location: "/tmp/" + head.Filename,
+			UploadAt: time.Now().Format(time.DateTime),
+		}
+
+		newFile, err := os.Create(fileMeta.Location)
 		if err != nil {
 			fmt.Printf("Failed create data err: %s\n", err.Error())
 			return
 		}
 		defer newFile.Close()
 
-		_, err = io.Copy(newFile, file)
+		fileMeta.FileSize, err = io.Copy(newFile, file)
 		if err != nil {
 			fmt.Printf("Failed save data err: %s\n", err.Error())
 			return
 		}
+
+		newFile.Seek(0, 0)
+		fileMeta.FileSha1 = util.FileSha1(newFile)
+		meta.UpdateFileMeta(fileMeta)
 
 		http.Redirect(w, r, "/file/upload/suc", http.StatusFound)
 	}
