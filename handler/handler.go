@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path"
 	"time"
 )
 
@@ -122,6 +123,13 @@ func FileMetaUpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	curFileMeta := meta.GetFileMeta(fileSha1)
 	curFileMeta.FileName = newFileName
+
+	fileSuffix := path.Ext(curFileMeta.Location)
+	newFile := path.Dir(curFileMeta.Location) + "/" + curFileMeta.FileName + fileSuffix
+	curFileMeta.Location = newFile
+
+	os.Rename(curFileMeta.Location, newFile)
+
 	meta.UpdateFileMeta(curFileMeta)
 
 	marshal, err := json.Marshal(curFileMeta)
